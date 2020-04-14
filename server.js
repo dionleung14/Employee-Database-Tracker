@@ -35,10 +35,11 @@ const deptQuery = connection.query("SELECT name FROM department", function (
     departmentsArr.push(department.name);
   });
   departmentsArr.push("Other");
+  // console.log(departmentsArr)
 });
 
 let rolesArr = [];
-const rolesQuery = connection.query("SELECT title FROM department", function (
+const rolesQuery = connection.query("SELECT title FROM role", function (
   err,
   res
 ) {
@@ -47,6 +48,27 @@ const rolesQuery = connection.query("SELECT title FROM department", function (
     rolesArr.push(role.name);
   });
   rolesArr.push("Other");
+  console.log(rolesArr)
+});
+
+let employeesArr = [];
+const employeesQuery = connection.query("SELECT first_name, last_name FROM employee", function (
+  err,
+  res
+) {
+  if (err) throw err;
+  // console.log(res)
+  res.forEach((employee) => {
+    let employeeObj = {
+      name: {
+        first: employee.first_name,
+        last: employee.last,
+      }
+    };
+    employeesArr.push(employee);
+  });
+  // employeesArr.push("Other/None");
+  console.log(employeesArr)
 });
 
 const welcomeMat = () => {
@@ -55,7 +77,7 @@ const welcomeMat = () => {
       {
         type: `confirm`,
         message: `Welcome to the company database editor! Are you a manager?`,
-        name: `welcomeCheck`,
+        name: `welcomeCheck`
       },
     ])
     .then(function (managerCheck) {
@@ -68,12 +90,11 @@ const welcomeMat = () => {
             {
               type: `confirm`,
               message: `Try again?`,
-              name: `secondChance`,
+              name: `secondChance`
             },
           ])
           .then(function (secondChance) {
             if (!secondChance.secondChance) {
-              // doubleCheckExit();
               exitApp();
             } else {
               welcomeMat();
@@ -151,15 +172,12 @@ const addSomething = () => {
       switch (addAnswer.addSomething) {
         case `Add a new department`:
           addDepartment();
-          // console.log("I want to add a new department");
           break;
         case `Add a new role`:
           addRole();
-          // console.log("I want to add a new role");
           break;
         case `Add a new employee`:
           addEmployee();
-          // console.log("I want to add a new employee");
           break;
         case `Go back`:
           lobby();
@@ -179,12 +197,12 @@ const addDepartment = () => {
       {
         type: `input`,
         message: `What is the name of the department you wish to add? (required)`,
-        name: `deptName`,
+        name: `deptName`
       },
       {
         type: `number`,
         message: `What is the department code of the department you wish to add? (required) Hint: Should be a number. If unknown, contact HR or Accounting for more help`,
-        name: `deptId`,
+        name: `deptId`
       },
     ])
     .then(function (newDept) {
@@ -270,7 +288,7 @@ const addRole = () => {
     });
 };
 
-/* const addEmployee = () => {
+const addEmployee = () => {
   inquirer
     .prompt([
       {
