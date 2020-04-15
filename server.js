@@ -26,13 +26,13 @@ connection.connect(function (err) {
 });
 
 let departmentsArr = [];
-const deptQuery = connection.query("SELECT name FROM department", function (
+const deptQuery = connection.query("SELECT * FROM department", function (
   err,
   res
 ) {
   if (err) throw err;
   res.forEach((department) => {
-    departmentsArr.push(department.name);
+    departmentsArr.push(department);
   });
   departmentsArr.push("Other");
   // console.log(departmentsArr)
@@ -45,31 +45,37 @@ const rolesQuery = connection.query("SELECT title FROM role", function (
 ) {
   if (err) throw err;
   res.forEach((role) => {
-    rolesArr.push(role.name);
+    rolesArr.push(role.title);
   });
   rolesArr.push("Other");
-  console.log(rolesArr)
+  // console.log(rolesArr)
 });
 
 let employeesArr = [];
-const employeesQuery = connection.query("SELECT first_name, last_name FROM employee", function (
-  err,
-  res
-) {
-  if (err) throw err;
-  // console.log(res)
-  res.forEach((employee) => {
-    let employeeObj = {
-      name: {
-        first: employee.first_name,
-        last: employee.last,
-      }
-    };
-    employeesArr.push(employee);
-  });
-  // employeesArr.push("Other/None");
-  console.log(employeesArr)
-});
+const employeesQuery = connection.query(
+  "SELECT first_name, last_name FROM employee",
+  function (err, res) {
+    if (err) throw err;
+
+    for (let i = 0; i < res.length; i++) {
+      let name = res[i].first_name + " " + res[i].last_name;
+      employeesArr.push(name);
+    }
+
+    // res.forEach((employee) => {
+    //   let employeeObj = {
+    //     name: {
+    //       first: employee.first_name,
+    //       last: employee.last_name,
+    //     }
+    //   };
+    //   employeesArr.push(employeeObj);
+    // });
+
+    employeesArr.push("Other", "None");
+    // console.log(employeesArr)
+  }
+);
 
 const welcomeMat = () => {
   inquirer
@@ -77,7 +83,7 @@ const welcomeMat = () => {
       {
         type: `confirm`,
         message: `Welcome to the company database editor! Are you a manager?`,
-        name: `welcomeCheck`
+        name: `welcomeCheck`,
       },
     ])
     .then(function (managerCheck) {
@@ -90,7 +96,7 @@ const welcomeMat = () => {
             {
               type: `confirm`,
               message: `Try again?`,
-              name: `secondChance`
+              name: `secondChance`,
             },
           ])
           .then(function (secondChance) {
@@ -130,12 +136,14 @@ const lobby = () => {
           break;
         case "View something...":
           console.log("I want to view something");
+          viewSomething();
           break;
         case "Update something...":
           console.log("I want to update something");
           break;
         case "Delete something...":
           console.log("I want to delete something");
+          deleteSomething();
           break;
         case "Quit":
           exitApp();
@@ -197,12 +205,12 @@ const addDepartment = () => {
       {
         type: `input`,
         message: `What is the name of the department you wish to add? (required)`,
-        name: `deptName`
+        name: `deptName`,
       },
       {
         type: `number`,
         message: `What is the department code of the department you wish to add? (required) Hint: Should be a number. If unknown, contact HR or Accounting for more help`,
-        name: `deptId`
+        name: `deptId`,
       },
     ])
     .then(function (newDept) {
@@ -270,7 +278,7 @@ const addRole = () => {
           });
       } else {
         console.log(`Creating a new role in database...\n`);
-        rolesArr.push(newRole.roleTItle)
+        rolesArr.push(newRole.roleTItle);
         const query = connection.query(
           "INSERT INTO role SET ?",
           {
@@ -317,7 +325,7 @@ const addEmployee = () => {
         type: `number`,
         message: `What is the employee's id number? (required) Hint: Should be a number. If unknown, contact HR or Accounting for more help`,
         name: `empId`,
-      }
+      },
     ])
     .then(function (newEmp) {
       if (newEmp.empRole === "Other") {
@@ -334,6 +342,25 @@ const addEmployee = () => {
           ])
           .then(function (createRole) {
             if (createRole.createRoleFirst) {
+              addRole();
+            } else {
+              addSomething();
+            }
+          });
+      } else if (newEmp.empManager === "Other") {
+        console.log(
+          "Error: Please create the manager as a new employee before adding the employee under them."
+        );
+        inquirer
+          .prompt([
+            {
+              type: `confirm`,
+              message: ` Did you mean to say 'None' for this employee's manager?`,
+              name: `createManagerFirst`,
+            },
+          ])
+          .then(function (createRole) {
+            if (createRole.createManagerFirst) {
               addRole();
             } else {
               addSomething();
@@ -357,6 +384,118 @@ const addEmployee = () => {
       }
     });
 };
+
+const viewSomething = () => {
+  inquirer
+  .prompt([
+    {
+      type: `list`,
+      message: `What would you like to view?`,
+      choices: [
+        `View departments`,
+        `View roles`,
+        `View employees`,
+        `Go back`,
+        `Quit`,
+      ],
+      name: `viewSomething`,
+    },
+  ])
+  .then(function (viewAnswer) {
+    switch (viewAnswer.viewSomething) {
+      case `View departments`:
+        viewResults("department", lobby);
+        break;
+      case `View roles`:
+        viewResults("role", lobby);
+        break;
+      case `View employees`:
+        viewResults("employee", lobby);
+        break;
+      case `Go back`:
+        lobby();
+        break;
+      case `Quit`:
+        exitApp();
+        break;
+      default:
+        break;
+    }
+  });
+}
+
+const viewResults = (tableName, nextStep) => {
+  // let filteredDepts = departmentsArr.filter(function(name){
+  //   // return name.
+  // })
+  connection.query("SELECT * FROM ??", [tableName], function(err, data){
+    if (err) {
+      console.log(err)
+    }
+    console.table(data)
+    nextStep(tableName);
+  })
+}
+
+const deleteSomething = () => {
+  inquirer
+  .prompt([
+    {
+      type: `list`,
+      message: `What would you like to delete?`,
+      choices: [
+        `Delete a department`,
+        `Delete a role`,
+        `Delete an employee`,
+        `Go back`,
+        `Quit`,
+      ],
+      name: `deleteSomething`,
+    },
+  ])
+  .then(function (deleteAnswer) {
+    switch (deleteAnswer.deleteSomething) {
+      case `Delete a department`:
+        viewResults("department", deleteChoice);
+        break;
+      case `Delete a role`:
+        viewResults("role", deleteChoice)
+        break;
+      case `Delete an employee`:
+        viewResults("employee", deleteChoice)
+        break;
+      case `Go back`:
+        lobby();
+        break;
+      case `Quit`:
+        exitApp();
+        break;
+      default:
+        break;
+    }
+  });
+}
+
+const deleteChoice = (tableName) => {
+  inquirer
+    .prompt([
+      {
+        type: "number",
+        message: `Enter the id of the ${tableName} you wish to delete`,
+        name: "idDelete"
+      }
+    ]).then(function(deleteDept){
+      console.log(typeof deleteDept.idDelete)
+      connection.query("DELETE FROM ?? WHERE id = ?", [tableName, deleteDept.idDelete],function(err, data){
+        if (err) {
+          console.log(err)
+        }
+        console.log(`${tableName} deleted`);
+        lobby();
+      })
+    })
+}
+
 
 function createProduct() {
   console.log("Inserting a new product...\n");
