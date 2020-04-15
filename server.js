@@ -25,58 +25,6 @@ connection.connect(function (err) {
   welcomeMat();
 });
 
-let departmentsArr = [];
-const deptQuery = connection.query("SELECT * FROM department", function (
-  err,
-  res
-) {
-  if (err) throw err;
-  res.forEach((department) => {
-    departmentsArr.push(department);
-  });
-  departmentsArr.push("Other");
-  // console.log(departmentsArr)
-});
-
-let rolesArr = [];
-const rolesQuery = connection.query("SELECT title FROM role", function (
-  err,
-  res
-) {
-  if (err) throw err;
-  res.forEach((role) => {
-    rolesArr.push(role.title);
-  });
-  rolesArr.push("Other");
-  // console.log(rolesArr)
-});
-
-let employeesArr = [];
-const employeesQuery = connection.query(
-  "SELECT first_name, last_name FROM employee",
-  function (err, res) {
-    if (err) throw err;
-
-    for (let i = 0; i < res.length; i++) {
-      let name = res[i].first_name + " " + res[i].last_name;
-      employeesArr.push(name);
-    }
-
-    // res.forEach((employee) => {
-    //   let employeeObj = {
-    //     name: {
-    //       first: employee.first_name,
-    //       last: employee.last_name,
-    //     }
-    //   };
-    //   employeesArr.push(employeeObj);
-    // });
-
-    employeesArr.push("Other", "None");
-    // console.log(employeesArr)
-  }
-);
-
 const welcomeMat = () => {
   inquirer
     .prompt([
@@ -131,18 +79,16 @@ const lobby = () => {
     .then(function (lobbyAnswer) {
       switch (lobbyAnswer.lobbyChoice) {
         case "Add something...":
-          console.log("I want to add something");
           addSomething();
           break;
         case "View something...":
-          console.log("I want to view something");
           viewSomething();
           break;
         case "Update something...":
           console.log("I want to update something");
+          updateSomething();
           break;
         case "Delete something...":
-          console.log("I want to delete something");
           deleteSomething();
           break;
         case "Quit":
@@ -179,6 +125,7 @@ const addSomething = () => {
     .then(function (addAnswer) {
       switch (addAnswer.addSomething) {
         case `Add a new department`:
+          // addChoice("departments")
           addDepartment();
           break;
         case `Add a new role`:
@@ -199,6 +146,38 @@ const addSomething = () => {
     });
 };
 
+// const addChoice = (tableName) => {
+//   inquirer
+//     .prompt([
+//       {
+//         type: `input`,
+//         message: `What is the name of the department you wish to add? (required)`,
+//         name: `deptName`,
+//       },
+//       {
+//         type: `number`,
+//         message: `What is the department code of the department you wish to add? (required) Hint: Should be a number. If unknown, contact HR or Accounting for more help`,
+//         name: `deptId`,
+//       },
+//     ])
+//     .then(function (newDept) {
+//       departmentsArr.push(newDept.deptName);
+//       console.log(`Creating a new department in database...\n`);
+//       const query = connection.query(
+//         "INSERT INTO department SET ?",
+//         {
+//           id: newDept.deptId,
+//           name: newDept.deptName,
+//         },
+//         function (err, res) {
+//           if (err) throw err;
+//           console.log(res.affectedRows + " new department created!");
+//           addSomething();
+//         }
+//       );
+//     });
+// }
+
 const addDepartment = () => {
   inquirer
     .prompt([
@@ -214,24 +193,36 @@ const addDepartment = () => {
       },
     ])
     .then(function (newDept) {
-      departmentsArr.push(newDept.deptName);
+      // departmentsArr.push(newDept.deptName);
       console.log(`Creating a new department in database...\n`);
-      const query = connection.query(
-        "INSERT INTO department SET ?",
+      connection.query(
+        "INSERT INTO departments SET ?",
         {
           id: newDept.deptId,
           name: newDept.deptName,
         },
-        function (err, res) {
+        function (err, data) {
           if (err) throw err;
-          console.log(res.affectedRows + " new department created!");
-          addSomething();
+          console.log(data.affectedRows + " new department created!");
+          connection.query("SELECT * FROM departments", function (err, data) {
+            if (err) throw err;
+            console.table(data);
+            addSomething();
+          });
         }
       );
     });
 };
 
 const addRole = () => {
+  let departmentsArr = [];
+  connection.query("SELECT * FROM departments", function (err, data) {
+    if (err) throw err;
+    data.forEach((department) => {
+      departmentsArr.push(department.name);
+    });
+    departmentsArr.push("Other");
+  });
   inquirer
     .prompt([
       {
@@ -278,18 +269,28 @@ const addRole = () => {
           });
       } else {
         console.log(`Creating a new role in database...\n`);
-        rolesArr.push(newRole.roleTItle);
-        const query = connection.query(
-          "INSERT INTO role SET ?",
+        connection.query(
+          "SELECT id FROM departments WHERE ?",
           {
-            id: newRole.roleId,
-            title: newRole.roleTitle,
-            salary: newRole.roleSalary,
+            name: newRole.roleDept,
           },
-          function (err, res) {
+          function (err, data) {
             if (err) throw err;
-            console.log(res.affectedRows + " new role created!");
-            addSomething();
+            let deptCode = data[0].id;
+            connection.query(
+              "INSERT INTO roles SET ?",
+              {
+                id: newRole.roleId,
+                title: newRole.roleTitle,
+                salary: newRole.roleSalary,
+                department_id: deptCode,
+              },
+              function (err, res) {
+                if (err) throw err;
+                console.log(res.affectedRows + " new role created!");
+                addSomething();
+              }
+            );
           }
         );
       }
@@ -297,6 +298,26 @@ const addRole = () => {
 };
 
 const addEmployee = () => {
+  let rolesArr = [];
+  connection.query("SELECT title FROM roles", function (err, data) {
+    if (err) throw err;
+    data.forEach((role) => {
+      rolesArr.push(role.title);
+    });
+    rolesArr.push("Other");
+  });
+  let employeesArr = [];
+  connection.query("SELECT first_name, last_name FROM employees", function (
+    err,
+    data
+  ) {
+    if (err) throw err;
+    data.forEach((name) => {
+      let fullName = `${name.first_name} ${name.last_name}`;
+      employeesArr.push(fullName);
+    });
+    employeesArr.push("Other", "None");
+  });
   inquirer
     .prompt([
       {
@@ -368,17 +389,28 @@ const addEmployee = () => {
           });
       } else {
         console.log(`Creating a new employee in database...\n`);
-        const query = connection.query(
-          "INSERT INTO employee SET ?",
+        connection.query(
+          "SELECT id FROM roles WHERE?",
           {
-            id: newEmp.empId,
-            first_name: newEmp.firstName,
-            last_name: newEmp.lastName,
+            title: newEmp.empRole,
           },
-          function (err, res) {
+          function (err, data) {
             if (err) throw err;
-            console.log(res.affectedRows + " new role created!");
-            addSomething();
+            let roleId = data[0].id;
+            connection.query(
+              "INSERT INTO employees SET ?",
+              {
+                id: newEmp.empId,
+                first_name: newEmp.firstName,
+                last_name: newEmp.lastName,
+                role_id: roleId,
+              },
+              function (err, res) {
+                if (err) throw err;
+                console.log(res.affectedRows + " new role created!");
+                addSomething();
+              }
+            );
           }
         );
       }
@@ -387,94 +419,91 @@ const addEmployee = () => {
 
 const viewSomething = () => {
   inquirer
-  .prompt([
-    {
-      type: `list`,
-      message: `What would you like to view?`,
-      choices: [
-        `View departments`,
-        `View roles`,
-        `View employees`,
-        `Go back`,
-        `Quit`,
-      ],
-      name: `viewSomething`,
-    },
-  ])
-  .then(function (viewAnswer) {
-    switch (viewAnswer.viewSomething) {
-      case `View departments`:
-        viewResults("department", lobby);
-        break;
-      case `View roles`:
-        viewResults("role", lobby);
-        break;
-      case `View employees`:
-        viewResults("employee", lobby);
-        break;
-      case `Go back`:
-        lobby();
-        break;
-      case `Quit`:
-        exitApp();
-        break;
-      default:
-        break;
-    }
-  });
-}
+    .prompt([
+      {
+        type: `list`,
+        message: `What would you like to view?`,
+        choices: [
+          `View departments`,
+          `View roles`,
+          `View employees`,
+          `Go back`,
+          `Quit`,
+        ],
+        name: `viewSomething`,
+      },
+    ])
+    .then(function (viewAnswer) {
+      switch (viewAnswer.viewSomething) {
+        case `View departments`:
+          viewResults("departments", lobby);
+          break;
+        case `View roles`:
+          viewResults("roles", lobby);
+          break;
+        case `View employees`:
+          viewResults("employees", lobby);
+          break;
+        case `Go back`:
+          lobby();
+          break;
+        case `Quit`:
+          exitApp();
+          break;
+        default:
+          break;
+      }
+    });
+};
 
 const viewResults = (tableName, nextStep) => {
-  // let filteredDepts = departmentsArr.filter(function(name){
-  //   // return name.
-  // })
-  connection.query("SELECT * FROM ??", [tableName], function(err, data){
+  connection.query("SELECT * FROM ??", [tableName], function (err, data) {
     if (err) {
-      console.log(err)
+      console.log(err);
     }
-    console.table(data)
+    console.table(data);
     nextStep(tableName);
-  })
-}
+  });
+};
 
 const deleteSomething = () => {
   inquirer
-  .prompt([
-    {
-      type: `list`,
-      message: `What would you like to delete?`,
-      choices: [
-        `Delete a department`,
-        `Delete a role`,
-        `Delete an employee`,
-        `Go back`,
-        `Quit`,
-      ],
-      name: `deleteSomething`,
-    },
-  ])
-  .then(function (deleteAnswer) {
-    switch (deleteAnswer.deleteSomething) {
-      case `Delete a department`:
-        viewResults("department", deleteChoice);
-        break;
-      case `Delete a role`:
-        viewResults("role", deleteChoice)
-        break;
-      case `Delete an employee`:
-        viewResults("employee", deleteChoice)
-        break;
-      case `Go back`:
-        lobby();
-        break;
-      case `Quit`:
-        exitApp();
-        break;
-      default:
-        break;
-    }
-  });
-}
+    .prompt([
+      {
+        type: `list`,
+        message: `What would you like to delete?`,
+        choices: [
+          `Delete a department`,
+          `Delete a role`,
+          `Delete an employee`,
+          `Go back`,
+          `Quit`,
+        ],
+        name: `deleteSomething`,
+      },
+    ])
+    .then(function (deleteAnswer) {
+      switch (deleteAnswer.deleteSomething) {
+        case `Delete a department`:
+          viewResults("departments", deleteChoice);
+          break;
+        case `Delete a role`:
+          viewResults("roles", deleteChoice);
+          break;
+        case `Delete an employee`:
+          viewResults("employees", deleteChoice);
+          break;
+        case `Go back`:
+          lobby();
+          break;
+        case `Quit`:
+          exitApp();
+          break;
+        default:
+          break;
+      }
+    });
+};
 
 const deleteChoice = (tableName) => {
   inquirer
@@ -482,20 +511,147 @@ const deleteChoice = (tableName) => {
       {
         type: "number",
         message: `Enter the id of the ${tableName} you wish to delete`,
-        name: "idDelete"
-      }
-    ]).then(function(deleteDept){
-      console.log(typeof deleteDept.idDelete)
-      connection.query("DELETE FROM ?? WHERE id = ?", [tableName, deleteDept.idDelete],function(err, data){
-        if (err) {
-          console.log(err)
+        name: "idDelete",
+      },
+    ])
+    .then(function (deleteItem) {
+      connection.query(
+        "DELETE FROM ?? WHERE id = ?",
+        [tableName, deleteItem.idDelete],
+        function (err, data) {
+          if (err) {
+            console.log(err);
+          }
+          console.log(`${tableName} deleted`);
+          lobby();
         }
-        console.log(`${tableName} deleted`);
-        lobby();
-      })
-    })
-}
+      );
+    });
+};
 
+const updateSomething = () => {
+  inquirer
+    .prompt([
+      {
+        type: `list`,
+        message: `What would you like to update?`,
+        choices: [
+          `Update a department`,
+          `Update a role`,
+          `Update an employee`,
+          `Go back`,
+          `Quit`,
+        ],
+        name: `updateSomething`,
+      },
+    ])
+    .then(function (updateAnswer) {
+      switch (updateAnswer.updateSomething) {
+        case `Update a department`:
+          updateDepartment();
+          break;
+        case `Update a role`:
+          updateRole();
+          break;
+        case `Update an employee`:
+          updateEmployee();
+          break;
+        case `Go back`:
+          lobby();
+          break;
+        case `Quit`:
+          exitApp();
+          break;
+        default:
+          break;
+      }
+    });
+};
+
+const updateDepartment = () => {
+  let departmentsArr = [];
+  connection.query("SELECT * FROM departments", function (err, data) {
+    if (err) throw err;
+    data.forEach((department) => {
+      departmentsArr.push(department.name);
+    });
+    inquirer
+      .prompt([
+        {
+          type: `list`,
+          message: `Which department do you wish to update?`,
+          choices: departmentsArr,
+          name: `updateDept`,
+        },
+        {
+          type: `list`,
+          message: `Would you like to update the name or the department code?`,
+          choices: ["Name", "Department code (ID)"],
+          name: `updateChoice`,
+        },
+        {
+          type: `input`,
+          message: `Enter the new department name (required).`,
+          name: `updateName`,
+          when: function (answer) {
+            return answer.updateChoice === "Name";
+          },
+        },
+        {
+          type: `number`,
+          message: `Enter the new department code (required). Hint: Should be a number. If unknown, contact HR or Accounting for more help`,
+          name: `updateId`,
+          when: function (answer) {
+            return answer.updateChoice === "Department code (ID)";
+          },
+        },
+      ])
+      .then(function (updateItem) {
+        console.log("Updating department...");
+        switch (updateItem.updateChoice) {
+          case "Name":
+            connection.query(
+              "UPDATE departments SET ?? WHERE ?",
+              [updateItem.updateDept, { name: updateItem.updateName }],
+              function (err, data) {
+                if (err) throw err;
+                console.log(data.affectedRows + " department updated!");
+                connection.query("SELECT * FROM departments", function (
+                  err,
+                  data
+                ) {
+                  if (err) throw err;
+                  console.table(data);
+                });
+              }
+            );
+            updateSomething();
+            break;
+          case "Department code (ID)":
+            connection.query(
+              "UPDATE departments SET ?? WHERE ?",
+              [updateItem.updateDept, { name: updateItem.updateId }],
+              function (err, data) {
+                if (err) throw err;
+                console.log(data.affectedRows + " department updated!");
+                connection.query("SELECT * FROM departments", function (
+                  err,
+                  data
+                ) {
+                  if (err) throw err;
+                  console.table(data);
+                });
+              }
+            );
+            updateSomething();
+            break;
+          default:
+            updateSomething();
+            break;
+        }
+      });
+  });
+};
 
 function createProduct() {
   console.log("Inserting a new product...\n");
