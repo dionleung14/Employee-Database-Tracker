@@ -49,7 +49,7 @@ Licensed by MIT.
 
 ## Badges
 
-![README-Generator](https://img.shields.io/badge/dionleung14-README%20Generator-blue)
+![Employee-Database](https://img.shields.io/badge/dionleung14-Employee%20Database-blue)
 
 If you have any questions, please feel free to contact me at dioncleung@gmail.com.
 
