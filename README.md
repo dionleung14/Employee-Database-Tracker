@@ -17,7 +17,7 @@ This app allows for a user to build a company profile. It enables the creation o
 
 ## Installation
 
-Installing npm packages of inquirer, mysql, and console.table are required for best performance of this
+Installing npm packages of inquirer, mysql, and console.table are required for best performance of this command line app.
 
 ## Usage 
 
